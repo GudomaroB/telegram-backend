@@ -61,22 +61,24 @@ const cors = require("cors");
 
 const app = express();
 
-// ✅ Добавили CORS
-app.use(cors());
+// ✅ Явно разрешаем все origins и методы
+app.use(
+  cors({
+    origin: "*", // ⚠️ можно указать конкретный origin, если нужно
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"]
+  })
+);
 
-// ✅ Разбор JSON тела запроса
 app.use(bodyParser.json());
 
-// 🔐 Укажи токен и chat_id своего Telegram-бота
 const BOT_TOKEN = "8147321742:AAH_N68NqQQ6PzanKdJ-W-KJlUGX7s9oOKE";
 const CHAT_ID = "7032556278";
 
-// ✅ Эндпоинт для проверки
-app.get("/", (_, res) => {
-  res.send("✅ Telegram backend is running.");
+app.options("*", (_, res) => {
+  res.sendStatus(200); // ✅ Разрешаем preflight
 });
 
-// ✅ Основной эндпоинт получения заказа
 app.post("/send-order", async (req, res) => {
   const { name, items } = req.body;
 
@@ -121,7 +123,10 @@ app.post("/send-order", async (req, res) => {
   }
 });
 
-// ✅ Старт сервера
+app.get("/", (_, res) => {
+  res.send("✅ Telegram backend is running.");
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

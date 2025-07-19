@@ -1,59 +1,4 @@
-// const express = require("express");
-// const bodyParser = require("body-parser");
-// const fetch = require("node-fetch");
-// const app = express();
-// app.use(bodyParser.json());
-
-// // 🔐 ВСТАВЬ СВОЙ ТОКЕН И CHAT_ID СЮДА
-// const BOT_TOKEN = "8147321742:AAH_N68NqQQ6PzanKdJ-W-KJlUGX7s9oOKE";
-// const CHAT_ID = "7032556278";
-
-// app.post("/send-order", async (req, res) => {
-//   const { name, items } = req.body;
-
-//   if (!items || !Array.isArray(items)) {
-//     return res.status(400).json({ error: "Invalid order format" });
-//   }
-
-//   let message = `🛒 Новый заказ\n👤 Клиент: ${name}\n`;
-//   items.forEach((item) => {
-//     message += `• ${item.title} ×${item.quantity}\n`;
-//   });
-
-//   const total = items.reduce(
-//     (sum, item) => sum + item.price * item.quantity,
-//     0
-//   );
-//   message += `💰 Итого: ${total} ₸`;
-
-//   try {
-//     const tgResponse = await fetch(
-//       `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-//       {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({
-//           chat_id: CHAT_ID,
-//           text: message
-//         })
-//       }
-//     );
-
-//     const result = await tgResponse.json();
-//     res.status(200).json({ ok: true, telegram: result });
-//   } catch (e) {
-//     res.status(500).json({ ok: false, error: e.message });
-//   }
-// });
-
-// app.get("/", (_, res) => {
-//   res.send("✅ Telegram backend is running.");
-// });
-
-// const PORT = process.env.PORT || 3000;
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-// });
+// index.js
 const express = require("express");
 const bodyParser = require("body-parser");
 const fetch = require("node-fetch");
@@ -61,65 +6,51 @@ const cors = require("cors");
 
 const app = express();
 
-// ✅ Явно разрешаем все origins и методы
-app.use(
-  cors({
-    origin: "*", // ⚠️ можно указать конкретный origin, если нужно
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"]
-  })
-);
+// ✅ Разрешаем запросы с любых frontend-источников
+app.use(cors());
 
 app.use(bodyParser.json());
 
 const BOT_TOKEN = "8147321742:AAH_N68NqQQ6PzanKdJ-W-KJlUGX7s9oOKE";
 const CHAT_ID = "7032556278";
 
-app.options("*", (_, res) => {
-  res.sendStatus(200); // ✅ Разрешаем preflight
-});
-
 app.post("/send-order", async (req, res) => {
-  const { name, items } = req.body;
+  const { name, phone, cart } = req.body;
 
-  if (!items || !Array.isArray(items)) {
-    return res.status(400).json({ error: "Invalid order format" });
+  if (!cart || !Array.isArray(cart)) {
+    return res.status(400).json({ error: "Invalid cart format" });
   }
 
-  let message = `🛒 Новый заказ\n👤 Клиент: ${name}\n`;
-  items.forEach((item) => {
+  let message = `🛒 Новый заказ\n👤 Имя: ${name}\n📞 Телефон: ${phone}\n`;
+
+  cart.forEach((item) => {
     message += `• ${item.title} ×${item.quantity}\n`;
   });
 
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  message += `💰 Итого: ${total} ₸`;
-
   try {
-    const tgResponse = await fetch(
+    const tgRes = await fetch(
       `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: CHAT_ID,
-          text: message
+          text: message,
+          parse_mode: "HTML"
         })
       }
     );
 
-    const result = await tgResponse.json();
+    const tgJson = await tgRes.json();
 
-    if (!result.ok) {
-      throw new Error(result.description || "Telegram error");
+    if (!tgJson.ok) {
+      throw new Error(tgJson.description || "Telegram error");
     }
 
-    res.status(200).json({ ok: true, telegram: result });
-  } catch (e) {
-    console.error("Ошибка при отправке в Telegram:", e);
-    res.status(500).json({ ok: false, error: e.message });
+    res.status(200).json({ ok: true, telegram: tgJson });
+  } catch (err) {
+    console.error("❌ Ошибка Telegram:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -129,5 +60,5 @@ app.get("/", (_, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server started on port ${PORT}`);
 });
